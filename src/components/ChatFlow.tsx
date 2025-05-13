@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, MessageSquare, Edit } from "lucide-react";
@@ -74,20 +73,24 @@ const ChatFlow = () => {
               <div className="w-full flex flex-col md:flex-row gap-4 justify-center">
                 <Button 
                   onClick={() => selectDraftMode('assistant')} 
-                  className="flex-1 py-8 bg-gray-800 hover:bg-gray-700 flex flex-col items-center gap-3"
+                  className="flex-1 relative py-12 bg-gray-800 hover:bg-gray-700"
                 >
-                  <MessageSquare className="h-8 w-8" />
-                  <span className="text-base">Use AI Assistant</span>
-                  <span className="text-xs text-gray-200">Let AI help draft your message</span>
+                  <div className="flex flex-col items-center">
+                    <MessageSquare className="mb-3 h-8 w-8" />
+                    <span className="text-base mb-2">Use AI Assistant</span>
+                    <span className="text-xs text-gray-200">Let AI help draft your message</span>
+                  </div>
                 </Button>
                 
                 <Button 
                   onClick={() => selectDraftMode('manual')} 
-                  className="flex-1 py-8 bg-gray-700 hover:bg-gray-600 flex flex-col items-center gap-3"
+                  className="flex-1 relative py-12 bg-gray-700 hover:bg-gray-600"
                 >
-                  <Edit className="h-8 w-8" />
-                  <span className="text-base">Write Manually</span>
-                  <span className="text-xs text-gray-200">Create your own message</span>
+                  <div className="flex flex-col items-center">
+                    <Edit className="mb-3 h-8 w-8" />
+                    <span className="text-base mb-2">Write Manually</span>
+                    <span className="text-xs text-gray-200">Create your own message</span>
+                  </div>
                 </Button>
               </div>
             ) : (
