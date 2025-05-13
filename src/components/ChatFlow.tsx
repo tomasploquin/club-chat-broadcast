@@ -1,13 +1,15 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft, MessageSquare, Edit } from "lucide-react";
 import ChatInterface from "@/components/ChatInterface";
 import MessagePreview from "@/components/MessagePreview";
 import MemberSelection from "@/components/MemberSelection";
+import ManualDraftInput from "@/components/ManualDraftInput";
 
 const ChatFlow = () => {
   const [step, setStep] = useState<number>(1);
+  const [draftMode, setDraftMode] = useState<'assistant' | 'manual' | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
   const [finalMessage, setFinalMessage] = useState('');
   const [messageSubject, setMessageSubject] = useState('');
@@ -37,6 +39,7 @@ const ChatFlow = () => {
       setMessageCategory('');
       setIsApproved(false);
       setSendComplete(false);
+      setDraftMode(null);
       setStep(1);
     }, 2000);
   };
@@ -53,6 +56,10 @@ const ChatFlow = () => {
     }
   };
 
+  const selectDraftMode = (mode: 'assistant' | 'manual') => {
+    setDraftMode(mode);
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -60,19 +67,58 @@ const ChatFlow = () => {
           <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Draft Your Message</h2>
-              <p className="text-gray-500 text-sm">Use the AI assistant to help craft your message</p>
+              <p className="text-gray-500 text-sm">Choose how you want to create your message</p>
             </div>
-            <ChatInterface onMessageUpdate={handleMessageUpdate} />
-            <div className="flex justify-end mt-6 w-full">
-              <Button 
-                onClick={nextStep} 
-                className="bg-gray-800 hover:bg-gray-700 gap-2"
-                disabled={!draftMessage}
-              >
-                Preview
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            
+            {!draftMode ? (
+              <div className="w-full flex flex-col md:flex-row gap-4 justify-center">
+                <Button 
+                  onClick={() => selectDraftMode('assistant')} 
+                  className="flex-1 py-8 bg-gray-800 hover:bg-gray-700 flex flex-col items-center gap-3"
+                >
+                  <MessageSquare className="h-8 w-8" />
+                  <span className="text-base">Use AI Assistant</span>
+                  <span className="text-xs text-gray-200">Let AI help draft your message</span>
+                </Button>
+                
+                <Button 
+                  onClick={() => selectDraftMode('manual')} 
+                  className="flex-1 py-8 bg-gray-700 hover:bg-gray-600 flex flex-col items-center gap-3"
+                >
+                  <Edit className="h-8 w-8" />
+                  <span className="text-base">Write Manually</span>
+                  <span className="text-xs text-gray-200">Create your own message</span>
+                </Button>
+              </div>
+            ) : (
+              <>
+                {draftMode === 'assistant' ? (
+                  <ChatInterface onMessageUpdate={handleMessageUpdate} />
+                ) : (
+                  <ManualDraftInput onMessageUpdate={handleMessageUpdate} />
+                )}
+                
+                <div className="flex justify-between mt-6 w-full">
+                  <Button 
+                    onClick={() => setDraftMode(null)} 
+                    variant="outline" 
+                    className="gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  
+                  <Button 
+                    onClick={nextStep} 
+                    className="bg-gray-800 hover:bg-gray-700 gap-2"
+                    disabled={!draftMessage}
+                  >
+                    Preview
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         );
       case 2:
