@@ -109,14 +109,16 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
           <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search members..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="flex-1"
-              prefix={<Search className="h-4 w-4 text-gray-400" />}
-              disabled={disabled}
-            />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search members..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9"
+                disabled={disabled}
+              />
+            </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
