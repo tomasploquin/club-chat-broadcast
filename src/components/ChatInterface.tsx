@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Send, User, Key } from "lucide-react";
+import { Bot, Send, User } from "lucide-react";
 
 type Message = {
   role: 'user' | 'assistant';
@@ -23,10 +23,11 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Fixed API key - stored directly in the component
+  const apiKey = "sk-zh_9SNsAGZEbrQuBJ8HAx-iqJcimJXCQoBhqnqF6IUT3BlbkFJ2qqp4zX1M2dzFa4AlUtxWqqOmThpxpGyjFO2g3M3kA";
 
   useEffect(() => {
     scrollToBottom();
@@ -43,57 +44,14 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
     }
   }, [messages, onMessageUpdate]);
 
-  // Check if API key exists in localStorage
-  useEffect(() => {
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      setShowApiKeyInput(false);
-    }
-  }, []);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const saveApiKey = () => {
-    if (!apiKey.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid API key",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    localStorage.setItem('openai_api_key', apiKey);
-    setShowApiKeyInput(false);
-    toast({
-      title: "Success",
-      description: "API key saved successfully",
-    });
-  };
-
-  const resetApiKey = () => {
-    localStorage.removeItem('openai_api_key');
-    setApiKey('');
-    setShowApiKeyInput(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!input.trim()) return;
-    
-    if (!apiKey) {
-      toast({
-        title: "Error",
-        description: "Please set your OpenAI API key first",
-        variant: "destructive"
-      });
-      setShowApiKeyInput(true);
-      return;
-    }
     
     // Add user message
     const userMessage = { role: 'user' as const, content: input };
@@ -105,14 +63,14 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
     
     try {
       // Call OpenAI API
-      const response = await callOpenAI(apiKey, input, messages);
+      const response = await callOpenAI(input, messages);
       const assistantMessage = { role: 'assistant' as const, content: response };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("OpenAI API error:", error);
       toast({
         title: "Error",
-        description: "Failed to generate message. Please check your API key and try again.",
+        description: "Failed to generate message. Please try again later.",
         variant: "destructive"
       });
     } finally {
@@ -121,7 +79,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   };
 
   // Function to call OpenAI API
-  const callOpenAI = async (key: string, userInput: string, prevMessages: Message[]): Promise<string> => {
+  const callOpenAI = async (userInput: string, prevMessages: Message[]): Promise<string> => {
     try {
       // Prepare the messages for the API
       const messagesToSend = [
@@ -142,7 +100,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${key}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -172,108 +130,70 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         <h3 className="text-sm font-medium text-gray-700">Message Assistant</h3>
       </div>
       
-      {showApiKeyInput ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50/50">
-          <div className="w-full max-w-sm">
-            <h3 className="text-lg font-medium text-center mb-4">Enter your OpenAI API key</h3>
-            <div className="flex gap-2 mb-2">
-              <Input 
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-..."
-                className="flex-1"
-              />
-              <Button onClick={saveApiKey} size="sm" className="bg-gray-800 hover:bg-gray-700">
-                <Key className="h-3 w-3 mr-1" />
-                <span className="text-xs">Save</span>
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              Your API key is stored locally and never sent to our servers.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`flex items-start gap-2 max-w-[85%] ${
-                    msg.role === 'user' ? 'flex-row-reverse' : ''
-                  }`}
-                >
-                  <div
-                    className={`p-2.5 rounded-lg ${
-                      msg.role === 'user'
-                        ? 'bg-gray-800 text-white rounded-tr-none'
-                        : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm'
-                    }`}
-                  >
-                    <p className="whitespace-pre-line text-sm">{msg.content}</p>
-                  </div>
-                  <div
-                    className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                      msg.role === 'user' ? 'bg-gray-700' : 'bg-gray-400'
-                    }`}
-                  >
-                    {msg.role === 'user' ? (
-                      <User className="w-3 h-3 text-white" />
-                    ) : (
-                      <Bot className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-          
-          <form onSubmit={handleSubmit} className="p-3 border-t bg-white flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1"
-            />
-            {apiKey && (
-              <Button 
-                type="button" 
-                onClick={resetApiKey}
-                size="sm"
-                variant="outline"
-                className="px-2"
-                title="Reset API Key"
-              >
-                <Key className="h-3 w-3" />
-              </Button>
-            )}
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
-              className="bg-gray-800 hover:bg-gray-700"
-              size="sm"
+      <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`flex items-start gap-2 max-w-[85%] ${
+                msg.role === 'user' ? 'flex-row-reverse' : ''
+              }`}
             >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <div className="h-3 w-3 border-t-2 border-b-2 border-white rounded-full animate-spin mr-1"></div>
-                  <span className="text-xs">Thinking</span>
-                </div>
-              ) : (
-                <>
-                  <Send className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Send</span>
-                </>
-              )}
-            </Button>
-          </form>
-        </>
-      )}
+              <div
+                className={`p-2.5 rounded-lg ${
+                  msg.role === 'user'
+                    ? 'bg-gray-800 text-white rounded-tr-none'
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm'
+                }`}
+              >
+                <p className="whitespace-pre-line text-sm">{msg.content}</p>
+              </div>
+              <div
+                className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                  msg.role === 'user' ? 'bg-gray-700' : 'bg-gray-400'
+                }`}
+              >
+                {msg.role === 'user' ? (
+                  <User className="w-3 h-3 text-white" />
+                ) : (
+                  <Bot className="w-3 h-3 text-white" />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+      
+      <form onSubmit={handleSubmit} className="p-3 border-t bg-white flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message..."
+          disabled={isLoading}
+          className="flex-1"
+        />
+        <Button 
+          type="submit" 
+          disabled={isLoading} 
+          className="bg-gray-800 hover:bg-gray-700"
+          size="sm"
+        >
+          {isLoading ? (
+            <div className="flex items-center">
+              <div className="h-3 w-3 border-t-2 border-b-2 border-white rounded-full animate-spin mr-1"></div>
+              <span className="text-xs">Thinking</span>
+            </div>
+          ) : (
+            <>
+              <Send className="h-3 w-3 mr-1" />
+              <span className="text-xs">Send</span>
+            </>
+          )}
+        </Button>
+      </form>
     </div>
   );
 };
