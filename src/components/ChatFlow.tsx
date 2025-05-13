@@ -57,16 +57,16 @@ const ChatFlow = () => {
     switch (step) {
       case 1:
         return (
-          <div className="fade-in w-full max-w-3xl">
-            <div className="mb-8">
-              <h2 className="text-2xl font-serif mb-2 text-club-navy">Draft Your Message</h2>
-              <p className="text-club-charcoal/60">Use the AI assistant to help craft your message</p>
+          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-serif mb-2 text-gray-800">Draft Your Message</h2>
+              <p className="text-gray-500 text-sm">Use the AI assistant to help craft your message</p>
             </div>
             <ChatInterface onMessageUpdate={handleMessageUpdate} />
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-6 w-full">
               <Button 
                 onClick={nextStep} 
-                className="bg-club-navy hover:bg-club-navy/90 gap-2"
+                className="bg-gray-800 hover:bg-gray-700 gap-2"
                 disabled={!draftMessage}
               >
                 Preview
@@ -77,13 +77,13 @@ const ChatFlow = () => {
         );
       case 2:
         return (
-          <div className="fade-in w-full max-w-3xl">
-            <div className="mb-8">
-              <h2 className="text-2xl font-serif mb-2 text-club-navy">Preview & Approve</h2>
-              <p className="text-club-charcoal/60">Review your message before sending</p>
+          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-serif mb-2 text-gray-800">Preview & Approve</h2>
+              <p className="text-gray-500 text-sm">Review your message before sending</p>
             </div>
             <MessagePreview draftMessage={draftMessage} onApprove={handleApprove} />
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-between mt-6 w-full">
               <Button 
                 onClick={prevStep} 
                 variant="outline" 
@@ -97,10 +97,10 @@ const ChatFlow = () => {
         );
       case 3:
         return (
-          <div className="fade-in w-full max-w-3xl">
-            <div className="mb-8">
-              <h2 className="text-2xl font-serif mb-2 text-club-navy">Select Recipients</h2>
-              <p className="text-club-charcoal/60">Choose members to receive your message</p>
+          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-serif mb-2 text-gray-800">Select Recipients</h2>
+              <p className="text-gray-500 text-sm">Choose members to receive your message</p>
             </div>
             <MemberSelection
               messageSubject={messageSubject}
@@ -109,7 +109,7 @@ const ChatFlow = () => {
               onSendComplete={handleSendComplete}
               disabled={!isApproved || sendComplete}
             />
-            <div className="flex justify-start mt-6">
+            <div className="flex justify-start mt-6 w-full">
               <Button 
                 onClick={prevStep} 
                 variant="outline"
@@ -128,25 +128,25 @@ const ChatFlow = () => {
 
   return (
     <div className="w-full py-8 px-4">
-      <div className="max-w-3xl mx-auto mb-8">
+      <div className="max-w-2xl mx-auto mb-10">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-serif text-club-navy">Message Broadcasting Center</h1>
+          <h1 className="text-2xl font-serif text-gray-800">Message Broadcast</h1>
         </div>
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className={`flex items-center ${step >= 1 ? 'text-club-navy' : 'text-gray-300'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= 1 ? 'border-club-navy bg-club-navy/5' : 'border-gray-200'}`}>1</div>
-              <span className="ml-2 font-medium hidden sm:inline">Draft</span>
+          <div className="flex items-center space-x-2">
+            <div className={`flex items-center ${step >= 1 ? 'text-gray-800' : 'text-gray-300'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 1 ? 'border-gray-800 bg-gray-50' : 'border-gray-200'}`}>1</div>
+              <span className="ml-2 text-sm font-medium hidden sm:inline">Draft</span>
             </div>
-            <div className={`w-12 h-0.5 mx-1 ${step > 1 ? 'bg-club-navy' : 'bg-gray-200'}`}></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-club-navy' : 'text-gray-300'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= 2 ? 'border-club-navy bg-club-navy/5' : 'border-gray-200'}`}>2</div>
-              <span className="ml-2 font-medium hidden sm:inline">Preview</span>
+            <div className={`w-10 h-0.5 ${step > 1 ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center ${step >= 2 ? 'text-gray-800' : 'text-gray-300'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 2 ? 'border-gray-800 bg-gray-50' : 'border-gray-200'}`}>2</div>
+              <span className="ml-2 text-sm font-medium hidden sm:inline">Preview</span>
             </div>
-            <div className={`w-12 h-0.5 mx-1 ${step > 2 ? 'bg-club-navy' : 'bg-gray-200'}`}></div>
-            <div className={`flex items-center ${step >= 3 ? 'text-club-navy' : 'text-gray-300'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= 3 ? 'border-club-navy bg-club-navy/5' : 'border-gray-200'}`}>3</div>
-              <span className="ml-2 font-medium hidden sm:inline">Send</span>
+            <div className={`w-10 h-0.5 ${step > 2 ? 'bg-gray-800' : 'bg-gray-200'}`}></div>
+            <div className={`flex items-center ${step >= 3 ? 'text-gray-800' : 'text-gray-300'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${step >= 3 ? 'border-gray-800 bg-gray-50' : 'border-gray-200'}`}>3</div>
+              <span className="ml-2 text-sm font-medium hidden sm:inline">Send</span>
             </div>
           </div>
         </div>

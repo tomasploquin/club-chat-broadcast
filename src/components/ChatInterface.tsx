@@ -88,40 +88,40 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] border rounded-lg overflow-hidden shadow-sm">
-      <div className="p-4 border-b bg-white">
-        <h3 className="text-lg font-serif text-club-navy">Message Assistant</h3>
+    <div className="w-full max-w-md mx-auto flex flex-col h-[500px] border rounded-lg overflow-hidden shadow-sm bg-white">
+      <div className="p-3 border-b bg-gray-50">
+        <h3 className="text-sm font-medium text-gray-700">Message Assistant</h3>
       </div>
       
-      <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+      <div className="flex-1 p-4 overflow-y-auto bg-gray-50/50">
         {messages.map((msg, index) => (
           <div
             key={index}
             className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`flex items-start gap-2.5 max-w-[80%] ${
+              className={`flex items-start gap-2 max-w-[85%] ${
                 msg.role === 'user' ? 'flex-row-reverse' : ''
               }`}
             >
               <div
-                className={`p-3 rounded-lg ${
+                className={`p-2.5 rounded-lg ${
                   msg.role === 'user'
-                    ? 'bg-club-navy text-white rounded-tr-none'
-                    : 'bg-white border border-gray-100 text-club-charcoal rounded-tl-none shadow-sm'
+                    ? 'bg-gray-800 text-white rounded-tr-none'
+                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm'
                 }`}
               >
                 <p className="whitespace-pre-line text-sm">{msg.content}</p>
               </div>
               <div
-                className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                  msg.role === 'user' ? 'bg-club-gold' : 'bg-club-navy'
+                className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                  msg.role === 'user' ? 'bg-gray-700' : 'bg-gray-400'
                 }`}
               >
                 {msg.role === 'user' ? (
-                  <User className="w-4 h-4 text-white" />
+                  <User className="w-3 h-3 text-white" />
                 ) : (
-                  <Bot className="w-4 h-4 text-white" />
+                  <Bot className="w-3 h-3 text-white" />
                 )}
               </div>
             </div>
@@ -130,7 +130,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         <div ref={messagesEndRef} />
       </div>
       
-      <form onSubmit={handleSubmit} className="p-4 border-t bg-white flex gap-2">
+      <form onSubmit={handleSubmit} className="p-3 border-t bg-white flex gap-2">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -141,17 +141,18 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         <Button 
           type="submit" 
           disabled={isLoading} 
-          className="bg-club-navy hover:bg-club-navy/90"
+          className="bg-gray-800 hover:bg-gray-700"
+          size="sm"
         >
           {isLoading ? (
             <div className="flex items-center">
-              <div className="h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-              <span>Thinking</span>
+              <div className="h-3 w-3 border-t-2 border-b-2 border-white rounded-full animate-spin mr-1"></div>
+              <span className="text-xs">Thinking</span>
             </div>
           ) : (
             <>
-              <Send className="h-4 w-4 mr-2" />
-              <span>Send</span>
+              <Send className="h-3 w-3 mr-1" />
+              <span className="text-xs">Send</span>
             </>
           )}
         </Button>
