@@ -9,7 +9,9 @@ const Index = () => {
       <ClubHeader />
       
       <main className="flex-1 container py-8 flex justify-center items-center">
-        <ChatFlow />
+        <div className="w-full max-w-3xl px-4">
+          <ChatFlow />
+        </div>
       </main>
       
       <footer className="py-6 border-t border-gray-100">

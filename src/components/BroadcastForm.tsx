@@ -49,8 +49,8 @@ const BroadcastForm = () => {
   };
 
   return (
-    <Card className="border-club-navy/20">
-      <CardHeader className="bg-club-navy bg-opacity-5">
+    <Card className="border-club-navy/20 shadow-lg ring-1 ring-gray-200 hover:shadow-xl transition-shadow duration-300">
+      <CardHeader className="bg-club-navy bg-opacity-5 border-b border-gray-100">
         <CardTitle className="text-xl font-serif">Broadcast Message</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
