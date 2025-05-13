@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +20,7 @@ const MessagePreview = ({ draftMessage, onApprove }: MessagePreviewProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMessage(draftMessage);
   }, [draftMessage]);
 
@@ -51,10 +51,10 @@ const MessagePreview = ({ draftMessage, onApprove }: MessagePreviewProps) => {
   };
 
   return (
-    <Card className="border-club-navy/20">
-      <CardHeader className="bg-club-navy bg-opacity-5">
-        <CardTitle className="text-xl font-serif flex justify-between items-center">
-          <span>Message Preview</span>
+    <Card className="border-gray-200 shadow-sm">
+      <CardContent className="p-6 space-y-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-serif text-club-navy">Message Preview</h3>
           <Button 
             variant="outline" 
             size="sm" 
@@ -73,11 +73,10 @@ const MessagePreview = ({ draftMessage, onApprove }: MessagePreviewProps) => {
               </>
             )}
           </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-6 space-y-4">
+        </div>
+        
         <div>
-          <label htmlFor="subject" className="block text-sm font-medium mb-1">Subject</label>
+          <label htmlFor="subject" className="block text-sm font-medium mb-1 text-gray-700">Subject</label>
           <Input
             id="subject"
             value={subject}
@@ -88,7 +87,7 @@ const MessagePreview = ({ draftMessage, onApprove }: MessagePreviewProps) => {
         </div>
         
         <div>
-          <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
+          <label htmlFor="category" className="block text-sm font-medium mb-1 text-gray-700">Category</label>
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-full bg-white">
               <SelectValue placeholder="Select category" />
@@ -104,12 +103,12 @@ const MessagePreview = ({ draftMessage, onApprove }: MessagePreviewProps) => {
         </div>
         
         <div>
-          <label htmlFor="message-content" className="block text-sm font-medium mb-1">Message</label>
+          <label htmlFor="message-content" className="block text-sm font-medium mb-1 text-gray-700">Message</label>
           <Textarea 
             id="message-content"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className={`min-h-[200px] bg-white ${isEditing ? '' : 'opacity-75'}`}
+            className={`min-h-[200px] bg-white ${isEditing ? '' : 'bg-gray-50'}`}
             readOnly={!isEditing}
           />
         </div>

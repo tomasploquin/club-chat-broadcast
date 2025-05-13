@@ -30,6 +30,17 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    // Find the last assistant message
+    const lastAssistantMessage = [...messages]
+      .reverse()
+      .find(msg => msg.role === 'assistant');
+      
+    if (lastAssistantMessage) {
+      onMessageUpdate(lastAssistantMessage.content);
+    }
+  }, [messages, onMessageUpdate]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -53,9 +64,6 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         const response = generateAIResponse(input);
         const assistantMessage = { role: 'assistant' as const, content: response };
         setMessages((prev) => [...prev, assistantMessage]);
-        
-        // Update the draft in the preview section
-        onMessageUpdate(response);
         setIsLoading(false);
       }, 1000);
     } catch (error) {
@@ -80,12 +88,12 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   };
 
   return (
-    <div className="flex flex-col h-[500px] border rounded-md bg-white shadow-sm">
-      <div className="p-4 border-b bg-club-navy text-white">
-        <h3 className="text-lg font-serif">Message Assistant</h3>
+    <div className="flex flex-col h-[600px] border rounded-lg overflow-hidden shadow-sm">
+      <div className="p-4 border-b bg-white">
+        <h3 className="text-lg font-serif text-club-navy">Message Assistant</h3>
       </div>
       
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -97,10 +105,10 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
               }`}
             >
               <div
-                className={`p-2 rounded-lg ${
+                className={`p-3 rounded-lg ${
                   msg.role === 'user'
                     ? 'bg-club-navy text-white rounded-tr-none'
-                    : 'bg-gray-100 text-club-charcoal rounded-tl-none'
+                    : 'bg-white border border-gray-100 text-club-charcoal rounded-tl-none shadow-sm'
                 }`}
               >
                 <p className="whitespace-pre-line text-sm">{msg.content}</p>
@@ -122,7 +130,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         <div ref={messagesEndRef} />
       </div>
       
-      <form onSubmit={handleSubmit} className="p-4 border-t flex gap-2">
+      <form onSubmit={handleSubmit} className="p-4 border-t bg-white flex gap-2">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}

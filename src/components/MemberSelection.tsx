@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -103,11 +103,8 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
 
   return (
     <>
-      <Card className="border-club-navy/20">
-        <CardHeader className="bg-club-navy bg-opacity-5">
-          <CardTitle className="text-xl font-serif">Member Selection</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
+      <Card className="border-gray-200 shadow-sm">
+        <CardContent className="p-6 space-y-6">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -161,34 +158,36 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
             </label>
           </div>
 
-          <div className="border rounded-md">
-            <ScrollArea className="h-[250px] p-2">
-              {filteredMembers.length > 0 ? (
-                filteredMembers.map(member => (
-                  <div
-                    key={member.id}
-                    className="flex items-center space-x-2 py-2 px-1 hover:bg-gray-100 rounded-md"
-                  >
-                    <Checkbox
-                      id={`member-${member.id}`}
-                      checked={selectedMembers.includes(member.id)}
-                      onCheckedChange={() => handleSelectMember(member.id)}
-                      disabled={disabled}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{member.name}</p>
-                      <p className="text-xs text-gray-500">{member.email}</p>
+          <div className="border border-gray-200 rounded-md">
+            <ScrollArea className="h-[250px]">
+              <div className="p-1">
+                {filteredMembers.length > 0 ? (
+                  filteredMembers.map(member => (
+                    <div
+                      key={member.id}
+                      className="flex items-center space-x-2 py-2 px-2 hover:bg-gray-50 rounded-md"
+                    >
+                      <Checkbox
+                        id={`member-${member.id}`}
+                        checked={selectedMembers.includes(member.id)}
+                        onCheckedChange={() => handleSelectMember(member.id)}
+                        disabled={disabled}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-gray-500">{member.email}</p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {member.group}
+                      </span>
                     </div>
-                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
-                      {member.group}
-                    </span>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 py-8">
+                    <p>No members found</p>
                   </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                  <p>No members found</p>
-                </div>
-              )}
+                )}
+              </div>
             </ScrollArea>
           </div>
 
