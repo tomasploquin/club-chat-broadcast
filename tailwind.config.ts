@@ -100,13 +100,35 @@ export default {
 				'pulse-subtle': {
 					'0%, 100%': { opacity: '1' },
 					'50%': { opacity: '0.8' }
+				},
+				'flow-right': {
+					'0%': { 
+						transform: 'translateX(-100%)',
+						opacity: '0' 
+					},
+					'100%': { 
+						transform: 'translateX(0)',
+						opacity: '1' 
+					}
+				},
+				'flow-left': {
+					'0%': { 
+						transform: 'translateX(100%)',
+						opacity: '0' 
+					},
+					'100%': { 
+						transform: 'translateX(0)',
+						opacity: '1' 
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out',
-				'pulse-subtle': 'pulse-subtle 3s infinite ease-in-out'
+				'pulse-subtle': 'pulse-subtle 3s infinite ease-in-out',
+				'flow-right': 'flow-right 0.4s ease-out',
+				'flow-left': 'flow-left 0.4s ease-out'
 			},
 			fontFamily: {
 				serif: ['Playfair Display', 'serif'],

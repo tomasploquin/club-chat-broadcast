@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, MessageSquare, Edit } from "lucide-react";
@@ -8,6 +9,7 @@ import ManualDraftInput from "@/components/ManualDraftInput";
 
 const ChatFlow = () => {
   const [step, setStep] = useState<number>(1);
+  const [previousStep, setPreviousStep] = useState<number>(1);
   const [draftMode, setDraftMode] = useState<'assistant' | 'manual' | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
   const [finalMessage, setFinalMessage] = useState('');
@@ -25,6 +27,7 @@ const ChatFlow = () => {
     setMessageSubject(subject);
     setMessageCategory(category);
     setIsApproved(true);
+    setPreviousStep(step);
     setStep(3); // Move to member selection after approval
   };
 
@@ -39,18 +42,21 @@ const ChatFlow = () => {
       setIsApproved(false);
       setSendComplete(false);
       setDraftMode(null);
+      setPreviousStep(step);
       setStep(1);
     }, 2000);
   };
 
   const nextStep = () => {
     if (step < 3) {
+      setPreviousStep(step);
       setStep(step + 1);
     }
   };
 
   const prevStep = () => {
     if (step > 1) {
+      setPreviousStep(step);
       setStep(step - 1);
     }
   };
@@ -59,11 +65,23 @@ const ChatFlow = () => {
     setDraftMode(mode);
   };
 
+  // Define flow animation classes based on step transition
+  const getFlowAnimationClass = () => {
+    if (step > previousStep) {
+      return 'animate-flow-right';
+    } else if (step < previousStep) {
+      return 'animate-flow-left';
+    }
+    return 'fade-in';
+  };
+
   const renderStep = () => {
+    const flowClass = getFlowAnimationClass();
+    
     switch (step) {
       case 1:
         return (
-          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+          <div className={`${flowClass} flex flex-col items-center w-full max-w-2xl mx-auto`}>
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Draft Your Message</h2>
               <p className="text-gray-500 text-sm">Choose how you want to create your message</p>
@@ -126,7 +144,7 @@ const ChatFlow = () => {
         );
       case 2:
         return (
-          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+          <div className={`${flowClass} flex flex-col items-center w-full max-w-2xl mx-auto`}>
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Preview & Approve</h2>
               <p className="text-gray-500 text-sm">Review your message before sending</p>
@@ -146,7 +164,7 @@ const ChatFlow = () => {
         );
       case 3:
         return (
-          <div className="fade-in flex flex-col items-center w-full max-w-2xl mx-auto">
+          <div className={`${flowClass} flex flex-col items-center w-full max-w-2xl mx-auto`}>
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Select Recipients</h2>
               <p className="text-gray-500 text-sm">Choose members to receive your message</p>
@@ -179,7 +197,7 @@ const ChatFlow = () => {
     <div className="w-full py-8 px-4">
       <div className="max-w-2xl mx-auto mb-10">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-serif text-gray-800">Message Broadcast</h1>
+          <h1 className="text-2xl font-serif text-gray-800 font-bold border-b-2 border-gray-800 inline-block">Message Broadcast</h1>
         </div>
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2">
@@ -201,7 +219,9 @@ const ChatFlow = () => {
         </div>
       </div>
 
-      {renderStep()}
+      <div className="border-2 border-gray-200 rounded-lg shadow-md bg-white p-6">
+        {renderStep()}
+      </div>
     </div>
   );
 };
