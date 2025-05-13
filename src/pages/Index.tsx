@@ -1,36 +1,73 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import ClubHeader from "@/components/ClubHeader";
-import BroadcastForm from "@/components/BroadcastForm";
-import MessageFeed from "@/components/MessageFeed";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ChatInterface from "@/components/ChatInterface";
+import MessagePreview from "@/components/MessagePreview";
+import MemberSelection from "@/components/MemberSelection";
 
 const Index = () => {
+  const [draftMessage, setDraftMessage] = useState('');
+  const [finalMessage, setFinalMessage] = useState('');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [messageCategory, setMessageCategory] = useState('');
+  const [isApproved, setIsApproved] = useState(false);
+  const [sendComplete, setSendComplete] = useState(false);
+
+  const handleMessageUpdate = (message: string) => {
+    setDraftMessage(message);
+  };
+
+  const handleApprove = (message: string, subject: string, category: string) => {
+    setFinalMessage(message);
+    setMessageSubject(subject);
+    setMessageCategory(category);
+    setIsApproved(true);
+  };
+
+  const handleSendComplete = () => {
+    setSendComplete(true);
+    setTimeout(() => {
+      // Reset form after successful send
+      setDraftMessage('');
+      setFinalMessage('');
+      setMessageSubject('');
+      setMessageCategory('');
+      setIsApproved(false);
+      setSendComplete(false);
+    }, 2000);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-club-cream">
       <ClubHeader />
       
       <main className="flex-1 container py-8">
-        <Tabs defaultValue="messages" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
-            <TabsTrigger value="messages">Announcements</TabsTrigger>
-            <TabsTrigger value="broadcast">Broadcast</TabsTrigger>
-          </TabsList>
+        <h1 className="text-3xl font-serif mb-8 text-club-navy">Message Broadcasting Center</h1>
+        
+        <div className="grid gap-8 md:grid-cols-2">
+          <div>
+            <h2 className="text-xl font-serif mb-4 text-club-navy">Draft Your Message</h2>
+            <ChatInterface onMessageUpdate={handleMessageUpdate} />
+          </div>
           
-          <TabsContent value="messages" className="space-y-4">
-            <MessageFeed />
-          </TabsContent>
-          
-          <TabsContent value="broadcast" className="space-y-4">
-            <div className="max-w-xl mx-auto">
-              <p className="text-club-charcoal/70 mb-6 text-sm">
-                Use this form to send important announcements to all club members. 
-                Messages marked as priority will be highlighted in members' feeds.
-              </p>
-              <BroadcastForm />
+          <div>
+            <h2 className="text-xl font-serif mb-4 text-club-navy">Preview & Send</h2>
+            <div className="space-y-8">
+              <MessagePreview 
+                draftMessage={draftMessage} 
+                onApprove={handleApprove} 
+              />
+              
+              <MemberSelection 
+                messageSubject={messageSubject}
+                messageContent={finalMessage}
+                messageCategory={messageCategory}
+                onSendComplete={handleSendComplete}
+                disabled={!isApproved || sendComplete}
+              />
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </main>
       
       <footer className="py-6 border-t border-club-gray/20 bg-white">
