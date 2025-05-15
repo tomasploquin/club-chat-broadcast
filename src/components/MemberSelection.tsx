@@ -8,21 +8,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCheck, Search, Send, UsersRound, MessageSquare } from "lucide-react";
-import { sendBatchWhatsAppMessages } from "@/utils/whatsappApi";
+import { CheckCheck, Search, Send, UsersRound } from "lucide-react";
 
 // Mock data for members - in a real app this would come from a database
 const mockMembers = [
-  { id: "1", name: "Alice Smith", email: "alice@example.com", group: "Executive", phone: "+15551234567" },
-  { id: "2", name: "Bob Johnson", email: "bob@example.com", group: "Executive", phone: "+15552345678" },
-  { id: "3", name: "Carol Williams", email: "carol@example.com", group: "VIP", phone: "+15553456789" },
-  { id: "4", name: "David Brown", email: "david@example.com", group: "VIP", phone: "+15554567890" },
-  { id: "5", name: "Eve Davis", email: "eve@example.com", group: "Standard", phone: "+15555678901" },
-  { id: "6", name: "Frank Miller", email: "frank@example.com", group: "Standard", phone: "+15556789012" },
-  { id: "7", name: "Grace Wilson", email: "grace@example.com", group: "Standard", phone: "+15557890123" },
-  { id: "8", name: "Hannah Moore", email: "hannah@example.com", group: "Standard", phone: "+15558901234" },
-  { id: "9", name: "Ian Taylor", email: "ian@example.com", group: "Standard", phone: "+15559012345" },
-  { id: "10", name: "Jane Anderson", email: "jane@example.com", group: "Standard", phone: "+15550123456" },
+  { id: "1", name: "Alice Smith", email: "alice@example.com", group: "Executive" },
+  { id: "2", name: "Bob Johnson", email: "bob@example.com", group: "Executive" },
+  { id: "3", name: "Carol Williams", email: "carol@example.com", group: "VIP" },
+  { id: "4", name: "David Brown", email: "david@example.com", group: "VIP" },
+  { id: "5", name: "Eve Davis", email: "eve@example.com", group: "Standard" },
+  { id: "6", name: "Frank Miller", email: "frank@example.com", group: "Standard" },
+  { id: "7", name: "Grace Wilson", email: "grace@example.com", group: "Standard" },
+  { id: "8", name: "Hannah Moore", email: "hannah@example.com", group: "Standard" },
+  { id: "9", name: "Ian Taylor", email: "ian@example.com", group: "Standard" },
+  { id: "10", name: "Jane Anderson", email: "jane@example.com", group: "Standard" },
 ];
 
 type MemberSelectionProps = {
@@ -39,8 +38,6 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
   const [selectAll, setSelectAll] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendChannel, setSendChannel] = useState<'email' | 'whatsapp'>('email');
-  const [showChannelDialog, setShowChannelDialog] = useState(false);
   const { toast } = useToast();
 
   const filteredMembers = mockMembers.filter(
@@ -67,65 +64,29 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
     );
   };
 
-  const sendMessage = async () => {
+  const sendMessage = () => {
     setSending(true);
-    
-    try {
-      const selectedMemberDetails = mockMembers.filter(member => 
-        selectedMembers.includes(member.id)
-      );
-      
-      if (sendChannel === 'whatsapp') {
-        // Send via WhatsApp
-        const phoneNumbers = selectedMemberDetails.map(member => member.phone);
-        const formattedMessage = `*${messageSubject}*\n\n${messageContent}\n\nCategory: ${messageCategory}`;
-        
-        const result = await sendBatchWhatsAppMessages(phoneNumbers, formattedMessage);
-        
-        if (result.success) {
-          toast({
-            title: "WhatsApp messages sent",
-            description: `Successfully sent to ${result.sent} recipients via WhatsApp.`,
-          });
-        } else {
-          toast({
-            title: "Some messages failed",
-            description: `Sent: ${result.sent}, Failed: ${result.failed}`,
-            variant: "destructive"
-          });
-        }
-      } else {
-        // Original email sending logic (simulated)
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        toast({
-          title: "Email messages sent",
-          description: `Your message has been sent to ${selectedMembers.length} members via email.`,
-        });
-      }
-      
+
+    // Simulate API call delay
+    setTimeout(() => {
+      setSending(false);
       setShowDialog(false);
+      
+      toast({
+        title: "Message sent successfully",
+        description: `Your message has been sent to ${selectedMembers.length} members.`,
+      });
+      
       setSelectedMembers([]);
       setSelectAll(false);
       onSendComplete();
-      
-    } catch (error) {
-      console.error("Error sending messages:", error);
-      toast({
-        title: "Error sending messages",
-        description: "There was a problem sending your messages. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setSending(false);
-    }
+    }, 1500);
   };
 
   const handleSendToAll = () => {
     setSelectedMembers(mockMembers.map(member => member.id));
     setSelectAll(true);
-    setShowChannelDialog(true);
+    setShowDialog(true);
   };
 
   const handleSendToSelected = () => {
@@ -137,12 +98,6 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
       });
       return;
     }
-    setShowChannelDialog(true);
-  };
-  
-  const handleChannelSelect = (channel: 'email' | 'whatsapp') => {
-    setSendChannel(channel);
-    setShowChannelDialog(false);
     setShowDialog(true);
   };
 
@@ -252,53 +207,12 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
         </CardContent>
       </Card>
 
-      {/* Channel Selection Dialog */}
-      <Dialog open={showChannelDialog} onOpenChange={setShowChannelDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Messaging Channel</DialogTitle>
-            <DialogDescription>
-              How would you like to send this message to {selectedMembers.length} recipients?
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid grid-cols-2 gap-4 my-4">
-            <Button
-              onClick={() => handleChannelSelect('email')}
-              variant="outline"
-              className="flex flex-col h-auto py-6 items-center justify-center"
-            >
-              <Send className="h-10 w-10 mb-2" />
-              <span className="text-lg font-medium">Email</span>
-              <span className="text-xs text-gray-500 mt-1">Send via email</span>
-            </Button>
-            
-            <Button
-              onClick={() => handleChannelSelect('whatsapp')}
-              variant="outline"
-              className="flex flex-col h-auto py-6 items-center justify-center border-green-500 hover:bg-green-50"
-            >
-              <MessageSquare className="h-10 w-10 mb-2 text-green-600" />
-              <span className="text-lg font-medium text-green-600">WhatsApp</span>
-              <span className="text-xs text-gray-500 mt-1">Send via WhatsApp</span>
-            </Button>
-          </div>
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => setShowChannelDialog(false)}>
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm {sendChannel === 'whatsapp' ? 'WhatsApp' : 'Email'} Message</DialogTitle>
+            <DialogTitle>Confirm Message</DialogTitle>
             <DialogDescription>
-              You are about to send this message to {selectedMembers.length} members via {sendChannel === 'whatsapp' ? 'WhatsApp' : 'email'}.
+              You are about to send this message to {selectedMembers.length} members.
             </DialogDescription>
           </DialogHeader>
           
@@ -317,27 +231,11 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
             </div>
           </div>
 
-          {sendChannel === 'whatsapp' && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-3 mb-4">
-              <h3 className="text-sm font-medium flex items-center text-green-700">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                WhatsApp Delivery Information
-              </h3>
-              <p className="text-xs text-green-600 mt-1">
-                This message will be delivered via WhatsApp to the selected members' phone numbers.
-              </p>
-            </div>
-          )}
-
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={sendMessage} 
-              disabled={sending} 
-              className={sendChannel === 'whatsapp' ? 'bg-green-600 hover:bg-green-700' : 'bg-club-navy hover:bg-club-navy/90'}
-            >
+            <Button onClick={sendMessage} disabled={sending} className="bg-club-navy hover:bg-club-navy/90">
               {sending ? (
                 <div className="flex items-center">
                   <div className="h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
@@ -345,11 +243,7 @@ const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSe
                 </div>
               ) : (
                 <>
-                  {sendChannel === 'whatsapp' ? (
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                  ) : (
-                    <CheckCheck className="h-4 w-4 mr-2" />
-                  )}
+                  <CheckCheck className="h-4 w-4 mr-2" />
                   <span>Confirm Send</span>
                 </>
               )}
