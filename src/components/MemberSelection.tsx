@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCheck, Search, Send, UsersRound } from "lucide-react";
+import { CheckCheck, Search, Send, UsersRound, Check, FileText, Mail } from "lucide-react";
 
 // Mock data for members - in a real app this would come from a database
 const mockMembers = [
@@ -24,234 +23,236 @@ const mockMembers = [
   { id: "10", name: "Jane Anderson", email: "jane@example.com", group: "Standard" },
 ];
 
+type Member = typeof mockMembers[0];
+
 type MemberSelectionProps = {
-  messageSubject: string;
-  messageContent: string;
-  messageCategory: string;
+  message: string;
+  file?: File | null;
   onSendComplete: () => void;
-  disabled: boolean;
 };
 
-const MemberSelection = ({ messageSubject, messageContent, messageCategory, onSendComplete, disabled }: MemberSelectionProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
-  const [sending, setSending] = useState(false);
+const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps) => {
   const { toast } = useToast();
+  const [isSending, setIsSending] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
-  const filteredMembers = mockMembers.filter(
-    member =>
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.group.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMembers = useMemo(() => {
+    return mockMembers.filter(member =>
+      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [searchTerm]);
+
+  const handleSelectMember = (memberId: string) => {
+    setSelectedMembers(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(memberId)) {
+        newSelected.delete(memberId);
+      } else {
+        newSelected.add(memberId);
+      }
+      setSelectAll(newSelected.size === filteredMembers.length && filteredMembers.length > 0);
+      return newSelected;
+    });
+  };
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedMembers([]);
+      setSelectedMembers(new Set());
     } else {
-      setSelectedMembers(filteredMembers.map(member => member.id));
+      setSelectedMembers(new Set(filteredMembers.map(member => member.id)));
     }
     setSelectAll(!selectAll);
   };
-
-  const handleSelectMember = (id: string) => {
-    setSelectedMembers(prev =>
-      prev.includes(id)
-        ? prev.filter(memberId => memberId !== id)
-        : [...prev, id]
-    );
+  
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    // Reset selectAll when search term changes as filtered list changes
+    setSelectAll(false);
+    // Optionally, clear selected members when search changes, or retain them
+    // setSelectedMembers(new Set()); 
   };
 
-  const sendMessage = () => {
-    setSending(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      setSending(false);
-      setShowDialog(false);
-      
+  const handleSend = async () => {
+    if (selectedMembers.size === 0) {
       toast({
-        title: "Message sent successfully",
-        description: `Your message has been sent to ${selectedMembers.length} members.`,
-      });
-      
-      setSelectedMembers([]);
-      setSelectAll(false);
-      onSendComplete();
-    }, 1500);
-  };
-
-  const handleSendToAll = () => {
-    setSelectedMembers(mockMembers.map(member => member.id));
-    setSelectAll(true);
-    setShowDialog(true);
-  };
-
-  const handleSendToSelected = () => {
-    if (selectedMembers.length === 0) {
-      toast({
-        title: "No members selected",
+        title: "No Recipients",
         description: "Please select at least one member to send the message to.",
         variant: "destructive"
       });
       return;
     }
-    setShowDialog(true);
+
+    setIsSending(true);
+    
+    // Simulate API call
+    console.log("Sending message to member IDs:", Array.from(selectedMembers));
+    console.log("Message:", message);
+    if (file) {
+      console.log("File:", file.name);
+    }
+
+    // In a real app, you would construct FormData with selected member IDs
+    // and send it to your backend.
+    // For example:
+    // const formData = new FormData();
+    // formData.append('message', message);
+    // if (file) formData.append('file', file);
+    // Array.from(selectedMembers).forEach(id => formData.append('recipient_ids[]', id));
+    // const response = await fetch('http://localhost:8080/api/send-message-to-selected', {
+    //   method: 'POST',
+    //   body: formData
+    // });
+    // const data = await response.json();
+
+    // Simulating a delay for the API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    try {
+      // Mocking a successful response
+      toast({
+        title: "Success!",
+        description: `Message sent to ${selectedMembers.size} member(s).`,
+      });
+      onSendComplete();
+      setSelectedMembers(new Set());
+      setSearchTerm('');
+      setSelectAll(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
-    <>
-      <Card className="border-gray-200 shadow-sm">
-        <CardContent className="p-6 space-y-6">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800">Select Recipients & Send</h3>
+        </div>
+        
+        <div className="p-6 grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h4 className="text-md font-medium text-gray-700 mb-1">Find Members</h4>
+            <div className="relative">
               <Input
-                placeholder="Search members..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9"
-                disabled={disabled}
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
               />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={disabled}
-                  className="bg-club-gold hover:bg-club-gold/90"
-                >
-                  <UsersRound className="h-4 w-4 mr-2" />
-                  Send to All
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Send to all members</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will send your message to all {mockMembers.length} members. Are you sure?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleSendToAll}>
-                    Yes, send to all
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="select-all"
-              checked={selectAll}
-              onCheckedChange={handleSelectAll}
-              disabled={disabled}
-            />
-            <label
-              htmlFor="select-all"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Select All
-            </label>
-          </div>
+            {filteredMembers.length > 0 && (
+              <div className="flex items-center justify-between py-2 border-b">
+                <label htmlFor="selectAllCheckbox" className="flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    id="selectAllCheckbox"
+                    checked={selectAll && filteredMembers.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    disabled={filteredMembers.length === 0}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectAll ? 'Deselect All' : 'Select All'} ({filteredMembers.length})
+                  </span>
+                </label>
+              </div>
+            )}
 
-          <div className="border border-gray-200 rounded-md">
-            <ScrollArea className="h-[250px]">
-              <div className="p-1">
-                {filteredMembers.length > 0 ? (
-                  filteredMembers.map(member => (
+            <ScrollArea className="h-64 border rounded-md">
+              {filteredMembers.length > 0 ? (
+                <div className="p-2 space-y-1">
+                  {filteredMembers.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center space-x-2 py-2 px-2 hover:bg-gray-50 rounded-md"
+                      className={`flex items-center justify-between p-2.5 rounded-md hover:bg-gray-50 cursor-pointer ${selectedMembers.has(member.id) ? 'bg-gray-100' : ''}`}
+                      onClick={() => handleSelectMember(member.id)}
                     >
-                      <Checkbox
-                        id={`member-${member.id}`}
-                        checked={selectedMembers.includes(member.id)}
-                        onCheckedChange={() => handleSelectMember(member.id)}
-                        disabled={disabled}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-gray-500">{member.email}</p>
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          checked={selectedMembers.has(member.id)}
+                          onCheckedChange={() => handleSelectMember(member.id)}
+                          id={`member-${member.id}`}
+                        />
+                        <div>
+                          <label htmlFor={`member-${member.id}`} className="font-medium text-sm text-gray-800 cursor-pointer block">{member.name}</label>
+                          <p className="text-xs text-gray-500">{member.email} - <span className="font-medium">{member.group}</span></p>
+                        </div>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                        {member.group}
-                      </span>
+                      {selectedMembers.has(member.id) && <Check className="h-5 w-5 text-green-600" />}
                     </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 py-8">
-                    <p>No members found</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-500">
-              {selectedMembers.length} of {filteredMembers.length} members selected
-            </p>
-            <Button
-              onClick={handleSendToSelected}
-              disabled={disabled || selectedMembers.length === 0}
-              className="bg-club-navy hover:bg-club-navy/90"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send Message
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Message</DialogTitle>
-            <DialogDescription>
-              You are about to send this message to {selectedMembers.length} members.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-3 my-2 border p-3 rounded-md bg-gray-50">
-            <div>
-              <p className="text-xs uppercase text-gray-500">Subject</p>
-              <p className="font-medium">{messageSubject}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-gray-500">Category</p>
-              <p>{messageCategory}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-gray-500">Message</p>
-              <p className="text-sm whitespace-pre-line">{messageContent}</p>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={sendMessage} disabled={sending} className="bg-club-navy hover:bg-club-navy/90">
-              {sending ? (
-                <div className="flex items-center">
-                  <div className="h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-                  <span>Sending...</span>
+                  ))}
                 </div>
               ) : (
-                <>
-                  <CheckCheck className="h-4 w-4 mr-2" />
-                  <span>Confirm Send</span>
-                </>
+                <div className="p-4 text-center text-sm text-gray-500">
+                  No members found matching your search.
+                </div>
               )}
-            </Button>
+            </ScrollArea>
+            <p className="text-xs text-gray-500 pt-1">
+              Selected: {selectedMembers.size} member(s)
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+
+          <div className="space-y-4">
+            <h4 className="text-md font-medium text-gray-700 mb-1">Message Preview</h4>
+            <Card className="overflow-hidden">
+              <CardContent className="p-4">
+                {file && (
+                  <div className="mb-4 p-3 rounded-lg border bg-gray-50">
+                    {file.type.startsWith('image/') ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="Preview"
+                        className="max-h-48 w-full rounded-md object-contain"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-gray-500" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">{file.name}</p>
+                          <p className="text-xs text-gray-500">{Math.round(file.size / 1024)} KB</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="whitespace-pre-line text-sm text-gray-800 bg-gray-50 p-4 rounded-md max-h-60 overflow-y-auto">
+                  {message}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+          <Button
+            onClick={handleSend}
+            disabled={isSending || selectedMembers.size === 0}
+            className="bg-gray-800 hover:bg-gray-700 min-w-[150px]"
+          >
+            {isSending ? (
+              'Sending...'
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Send to {selectedMembers.size > 0 ? `${selectedMembers.size} Member(s)` : 'Selected Members'}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 };
 

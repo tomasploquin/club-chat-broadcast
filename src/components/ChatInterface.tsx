@@ -2,19 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { Bot, Send, User } from "lucide-react";
+import { Bot, Send, User, Image as ImageIcon, FileText } from "lucide-react";
+import { FileUpload } from './ImageUpload';
 
 type Message = {
   role: 'user' | 'assistant';
   content: string;
+  file?: File | null;
 };
 
 type ChatInterfaceProps = {
-  onMessageUpdate: (message: string) => void;
+  onMessageUpdate: (message: string, file?: File | null) => void;
 };
 
 const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   const [input, setInput] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     { 
       role: 'assistant', 
@@ -39,7 +42,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
       .find(msg => msg.role === 'assistant');
       
     if (lastAssistantMessage) {
-      onMessageUpdate(lastAssistantMessage.content);
+      onMessageUpdate(lastAssistantMessage.content, lastAssistantMessage.file);
     }
   }, [messages, onMessageUpdate]);
 
@@ -50,20 +53,26 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim()) return;
+    if (!input.trim() && !file) return;
     
     // Add user message
-    const userMessage = { role: 'user' as const, content: input };
+    const userMessage = { role: 'user' as const, content: input, file };
     setMessages((prev) => [...prev, userMessage]);
     
-    // Clear input
+    // Clear input and file
     setInput('');
+    setFile(null);
     setIsLoading(true);
     
     try {
       // Call OpenAI API
       const response = await callOpenAI(input, messages);
-      const assistantMessage = { role: 'assistant' as const, content: response };
+      // Create assistant message with the same file as the user's message
+      const assistantMessage = { 
+        role: 'assistant' as const, 
+        content: response,
+        file: file // Pass along the user's file
+      };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("OpenAI API error:", error);
@@ -75,6 +84,10 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setFile(file);
   };
 
   // Function to call OpenAI API
@@ -110,7 +123,7 @@ The weather wont stop us today from coming together and sharing a drink or two!
 
 Join us tonight from 6:30pm onwards at Oroya-Madrid Edition Rooftop. 
 
-We have an indoor table at our disposal in case it’s needed, so the gathering is on, rain or shine!
+We have an indoor table at our disposal in case it's needed, so the gathering is on, rain or shine!
 
 RSVP now via the App or this chat :) 
 
@@ -122,7 +135,7 @@ Use the following format:
 
 [Engaging opening line, while keeping it simple and minimalistic]
 
-[Event details in clear, concise paragraphs]
+[Event details]
 
 [Call to action]
 
@@ -165,7 +178,7 @@ Please maintain this consistent format while adapting the content to the specifi
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
-      console.error("Error calling OpenAI:", error);
+      console.error('Error calling OpenAI:', error);
       throw error;
     }
   };
@@ -194,6 +207,22 @@ Please maintain this consistent format while adapting the content to the specifi
                     : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-sm'
                 }`}
               >
+                {msg.file && (
+                  <div className="mb-2">
+                    {msg.file.type.startsWith('image/') ? (
+                      <img
+                        src={URL.createObjectURL(msg.file)}
+                        alt="Preview"
+                        className="max-h-40 rounded-lg object-contain"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                        <span className="text-sm text-gray-700">{msg.file.name}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <p className="whitespace-pre-line text-sm">{msg.content}</p>
               </div>
               <div
@@ -213,32 +242,21 @@ Please maintain this consistent format while adapting the content to the specifi
         <div ref={messagesEndRef} />
       </div>
       
-      <form onSubmit={handleSubmit} className="p-3 border-t bg-white flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          disabled={isLoading}
-          className="flex-1"
-        />
-        <Button 
-          type="submit" 
-          disabled={isLoading} 
-          className="bg-gray-800 hover:bg-gray-700"
-          size="sm"
-        >
-          {isLoading ? (
-            <div className="flex items-center">
-              <div className="h-3 w-3 border-t-2 border-b-2 border-white rounded-full animate-spin mr-1"></div>
-              <span className="text-xs">Thinking</span>
-            </div>
-          ) : (
-            <>
-              <Send className="h-3 w-3 mr-1" />
-              <span className="text-xs">Send</span>
-            </>
-          )}
-        </Button>
+      <form onSubmit={handleSubmit} className="p-4 border-t bg-white">
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isLoading || (!input.trim() && !file)}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          <FileUpload onFileSelect={handleFileSelect} />
+        </div>
       </form>
     </div>
   );

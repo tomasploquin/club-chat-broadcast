@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft, MessageSquare, Edit } from "lucide-react";
@@ -12,20 +11,20 @@ const ChatFlow = () => {
   const [previousStep, setPreviousStep] = useState<number>(1);
   const [draftMode, setDraftMode] = useState<'assistant' | 'manual' | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
+  const [draftFile, setDraftFile] = useState<File | null>(null);
   const [finalMessage, setFinalMessage] = useState('');
-  const [messageSubject, setMessageSubject] = useState('');
-  const [messageCategory, setMessageCategory] = useState('');
+  const [finalFile, setFinalFile] = useState<File | null>(null);
   const [isApproved, setIsApproved] = useState(false);
   const [sendComplete, setSendComplete] = useState(false);
 
-  const handleMessageUpdate = (message: string) => {
+  const handleMessageUpdate = (message: string, file?: File | null) => {
     setDraftMessage(message);
+    setDraftFile(file || null);
   };
 
-  const handleApprove = (message: string, subject: string, category: string) => {
+  const handleApprove = (message: string, file?: File | null) => {
     setFinalMessage(message);
-    setMessageSubject(subject);
-    setMessageCategory(category);
+    setFinalFile(file || null);
     setIsApproved(true);
     setPreviousStep(step);
     setStep(3); // Move to member selection after approval
@@ -36,9 +35,9 @@ const ChatFlow = () => {
     setTimeout(() => {
       // Reset form and return to first step after successful send
       setDraftMessage('');
+      setDraftFile(null);
       setFinalMessage('');
-      setMessageSubject('');
-      setMessageCategory('');
+      setFinalFile(null);
       setIsApproved(false);
       setSendComplete(false);
       setDraftMode(null);
@@ -149,7 +148,11 @@ const ChatFlow = () => {
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Preview & Approve</h2>
               <p className="text-gray-500 text-sm">Review your message before sending</p>
             </div>
-            <MessagePreview draftMessage={draftMessage} onApprove={handleApprove} />
+            <MessagePreview 
+              draftMessage={draftMessage} 
+              draftFile={draftFile}
+              onApprove={handleApprove} 
+            />
             <div className="flex justify-between mt-6 w-full">
               <Button 
                 onClick={prevStep} 
@@ -167,19 +170,17 @@ const ChatFlow = () => {
           <div className={`${flowClass} flex flex-col items-center w-full max-w-2xl mx-auto`}>
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-serif mb-2 text-gray-800">Select Recipients</h2>
-              <p className="text-gray-500 text-sm">Choose members to receive your message</p>
+              <p className="text-gray-500 text-sm">Choose who will receive your message</p>
             </div>
-            <MemberSelection
-              messageSubject={messageSubject}
-              messageContent={finalMessage}
-              messageCategory={messageCategory}
+            <MemberSelection 
+              message={finalMessage}
+              file={finalFile}
               onSendComplete={handleSendComplete}
-              disabled={!isApproved || sendComplete}
             />
-            <div className="flex justify-start mt-6 w-full">
+            <div className="flex justify-between mt-6 w-full">
               <Button 
                 onClick={prevStep} 
-                variant="outline"
+                variant="outline" 
                 className="gap-2"
               >
                 <ChevronLeft className="h-4 w-4" />

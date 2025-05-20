@@ -1,23 +1,28 @@
-
 import React, { useState, useEffect } from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { FileUpload } from './ImageUpload';
 
 type ManualDraftInputProps = {
-  onMessageUpdate: (message: string) => void;
+  onMessageUpdate: (message: string, file?: File | null) => void;
 };
 
 const ManualDraftInput = ({ onMessageUpdate }: ManualDraftInputProps) => {
   const [text, setText] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const { toast } = useToast();
   
-  // Update parent component whenever text changes
+  // Update parent component whenever text or file changes
   useEffect(() => {
-    onMessageUpdate(text);
-  }, [text, onMessageUpdate]);
+    onMessageUpdate(text, file);
+  }, [text, file, onMessageUpdate]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
+  };
+
+  const handleFileSelect = (file: File | null) => {
+    setFile(file);
   };
 
   return (
@@ -34,6 +39,9 @@ const ManualDraftInput = ({ onMessageUpdate }: ManualDraftInputProps) => {
             placeholder="Type your message here..."
             className="min-h-[280px] focus:border-gray-300"
           />
+          <div className="mt-4">
+            <FileUpload onFileSelect={handleFileSelect} />
+          </div>
           <p className="mt-2 text-xs text-gray-500 text-right">
             {text.length} characters
           </p>
