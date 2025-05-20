@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,19 +80,56 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
   // Function to call OpenAI API
   const callOpenAI = async (userInput: string, prevMessages: Message[]): Promise<string> => {
     try {
-      // Prepare the messages for the API
+      // Enhanced system prompt with JOMO-specific instructions
+      const systemPrompt = {
+        role: "system",
+        content: `You are a message drafting assistant for JOMO Club communications. Your role is to craft warm, engaging, and well-structured messages that match JOMO's friendly and inclusive tone.
+
+Message Structure Guidelines:
+1. Start with a personalized greeting (e.g., "Hello JOMO Members", "Dear JOMO Community")
+2. Use an engaging opening line that creates excitement
+3. Include clear event details:
+   - Date and time
+   - Location
+   - Any special arrangements or notes
+4. End with a clear call-to-action (e.g., "RSVP now via the App or this chat")
+5. Sign off with "With Love, The JOMO Family"
+
+Tone and Style:
+- Warm
+- Make the description short and concise
+- Conversational and friendly
+- Keep paragraphs short and easy to read
+- Include personal touches that make members feel valued
+
+Example Format:
+[Greeting]
+
+[Engaging opening line]
+
+[Event details in clear, concise paragraphs]
+
+[Call to action]
+
+With Love,
+The JOMO Family
+
+Please maintain this consistent format while adapting the content to the specific event or announcement.`
+      };
+
+      // Get the last 6 messages for better context
+      const recentMessages = prevMessages.slice(-6);
+      
+      // Prepare the messages for the API with enhanced context
       const messagesToSend = [
-        {
-          role: "system",
-          content: "You are a helpful assistant that drafts professional messages for club members. Keep responses concise and well-structured. Format messages as if they're being sent directly to club members."
-        },
-        ...prevMessages.slice(-4).map(msg => ({
+        systemPrompt,
+        ...recentMessages.map(msg => ({
           role: msg.role,
           content: msg.content
         })),
         {
           role: "user",
-          content: userInput
+          content: `Please help me draft a JOMO message: ${userInput}`
         }
       ];
       
@@ -104,10 +140,12 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4',
           messages: messagesToSend,
           temperature: 0.7,
-          max_tokens: 800
+          max_tokens: 800,
+          presence_penalty: 0.6,
+          frequency_penalty: 0.3
         })
       });
       
