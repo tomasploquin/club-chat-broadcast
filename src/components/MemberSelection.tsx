@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,21 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCheck, Search, Send, UsersRound, Check, FileText, Mail } from "lucide-react";
 
-// Mock data for members - in a real app this would come from a database
-const mockMembers = [
-  { id: "1", name: "Alice Smith", email: "alice@example.com", group: "Executive" },
-  { id: "2", name: "Bob Johnson", email: "bob@example.com", group: "Executive" },
-  { id: "3", name: "Carol Williams", email: "carol@example.com", group: "VIP" },
-  { id: "4", name: "David Brown", email: "david@example.com", group: "VIP" },
-  { id: "5", name: "Eve Davis", email: "eve@example.com", group: "Standard" },
-  { id: "6", name: "Frank Miller", email: "frank@example.com", group: "Standard" },
-  { id: "7", name: "Grace Wilson", email: "grace@example.com", group: "Standard" },
-  { id: "8", name: "Hannah Moore", email: "hannah@example.com", group: "Standard" },
-  { id: "9", name: "Ian Taylor", email: "ian@example.com", group: "Standard" },
-  { id: "10", name: "Jane Anderson", email: "jane@example.com", group: "Standard" },
-];
-
-type Member = typeof mockMembers[0];
+type Member = {
+  id: string;
+  name: string;
+  whatsapp: string;
+};
 
 type MemberSelectionProps = {
   message: string;
@@ -37,13 +27,42 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  // Minimal CSV parser for this dataset
+  function parseCSV(csv: string): Member[] {
+    const lines = csv.trim().split('\n');
+    const header = lines[0].split(',');
+    const firstLastIdx = header.indexOf('first_last_text');
+    const indicatifIdx = header.indexOf('indicatif_phone_text');
+    const whatsappIdx = header.indexOf('whatapp_phone_number_text');
+    return lines.slice(1).map((line, i) => {
+      const cols = line.split(',');
+      const name = cols[firstLastIdx]?.trim() || '';
+      const indicatif = cols[indicatifIdx]?.trim() || '';
+      const whatsapp = cols[whatsappIdx]?.trim() || '';
+      return {
+        id: `${i + 1}`,
+        name,
+        whatsapp: indicatif && whatsapp ? `+${indicatif}${whatsapp}` : '',
+      };
+    }).filter(m => m.name && m.whatsapp);
+  }
+
+  useEffect(() => {
+    fetch('/members.csv')
+      .then(res => res.text())
+      .then(csv => {
+        setMembers(parseCSV(csv));
+      });
+  }, []);
 
   const filteredMembers = useMemo(() => {
-    return mockMembers.filter(member =>
+    return members.filter(member =>
       member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase())
+      member.whatsapp.includes(searchTerm.replace(/\s+/g, ''))
     );
-  }, [searchTerm]);
+  }, [searchTerm, members]);
 
   const handleSelectMember = (memberId: string) => {
     setSelectedMembers(prevSelected => {
@@ -186,7 +205,7 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
                         />
                         <div>
                           <label htmlFor={`member-${member.id}`} className="font-medium text-sm text-gray-800 cursor-pointer block">{member.name}</label>
-                          <p className="text-xs text-gray-500">{member.email} - <span className="font-medium">{member.group}</span></p>
+                          <p className="text-xs text-gray-500">{member.whatsapp}</p>
                         </div>
                       </div>
                       {selectedMembers.has(member.id) && <Check className="h-5 w-5 text-green-600" />}
