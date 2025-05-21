@@ -16,12 +16,13 @@ try:
 except ImportError as e:
     print(f"Could not import from MCP whatsapp.py: {e}")
     # Define dummy functions if import fails, so app can still run for testing other parts
-    def mcp_send_message(recipient, message):
-        print(f"[MCP DUMMY] Send message to {recipient}: {message}")
-        return True, "Message sent (dummy)"
     def mcp_send_file(recipient, file_path):
         print(f"[MCP DUMMY] Send file to {recipient}: {file_path}")
         return True, "File sent (dummy)"
+    def mcp_send_message(recipient, message):
+        print(f"[MCP DUMMY] Send message to {recipient}: {message}")
+        return True, "Message sent (dummy)"
+    
 
 app = Flask(__name__)
 CORS(app)
@@ -57,57 +58,65 @@ def send_whatsapp():
 @app.route('/api/send-message-to-selected', methods=['POST'])
 def send_message_to_selected():
     try:
-        message_text = request.form.get('message') # Renamed to avoid conflict with mcp_send_message variable
-        recipients_json = request.form.get('recipients')
-        file_obj = request.files.get('file') # Renamed to avoid conflict
+        base_message_body = request.form.get('message') 
+        recipients_data_json = request.form.get('recipients_data') # Changed from 'recipients'
+        file_obj = request.files.get('file')
 
-        if not message_text or not recipients_json:
-            return jsonify({"status": "error", "message": "Message and recipients are required"}), 400
+        if not base_message_body or not recipients_data_json:
+            return jsonify({"status": "error", "message": "Message and recipients_data are required"}), 400
 
         try:
-            recipients = json.loads(recipients_json)
+            recipients_data = json.loads(recipients_data_json)
         except json.JSONDecodeError as e:
-            return jsonify({"status": "error", "message": f"Invalid recipients JSON format: {str(e)}"}), 400
+            return jsonify({"status": "error", "message": f"Invalid recipients_data JSON format: {str(e)}"}), 400
         
-        if not isinstance(recipients, list) or not all(isinstance(r, str) for r in recipients):
-            return jsonify({"status": "error", "message": "Recipients should be a list of strings (JIDs)"}), 400
+        # Validate structure of recipients_data (list of objects with jid and first_text)
+        if not isinstance(recipients_data, list) or \
+           not all(isinstance(r, dict) and 'jid' in r and 'first_text' in r for r in recipients_data):
+            return jsonify({"status": "error", "message": "recipients_data should be a list of objects, each with 'jid' and 'first_text'"}), 400
 
-        print("Processing message:", message_text)
-        print("Processing for recipients:", recipients)
+        print("Base message body:", base_message_body)
+        print("Processing for recipients data:", recipients_data)
 
-        saved_file_path = None
-        absolute_saved_file_path = None # Variable for absolute path
+        absolute_saved_file_path = None
         if file_obj:
-            filename = file_obj.filename # Consider using secure_filename from werkzeug.utils
+            filename = file_obj.filename
             saved_file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            absolute_saved_file_path = os.path.abspath(saved_file_path) # Get absolute path
-            file_obj.save(saved_file_path) # Save with relative or absolute, os.path.abspath works on existing/non-existing
-            print("File saved to (relative):", saved_file_path)
-            print("File saved to (absolute):", absolute_saved_file_path)
+            absolute_saved_file_path = os.path.abspath(saved_file_path)
+            file_obj.save(saved_file_path)
+            print("File saved (absolute):", absolute_saved_file_path)
         
         results = []
-        for recipient_jid in recipients:
-            print(f"Attempting to send to: {recipient_jid}")
-            # Send text message
-            success, status_msg = mcp_send_message(recipient_jid, message_text)
-            results.append({"recipient": recipient_jid, "text_status": status_msg, "text_success": success})
-            print(f"Text send status for {recipient_jid}: {status_msg}")
+        for recipient_info in recipients_data:
+            recipient_jid = recipient_info['jid']
+            first_text = recipient_info['first_text']
 
-            # Send file if exists, using the absolute path
-            if absolute_saved_file_path and success: # Optionally, only send file if text was successful
+            # Construct personalized message
+            personalized_message = f"Dear {first_text},\n{base_message_body}"
+
+            print(f"Attempting to send to: {recipient_jid} with message:\n{personalized_message}")
+            
+            file_sent_successfully = False
+            current_result = {"recipient": recipient_jid} 
+
+            if absolute_saved_file_path:
                 file_success, file_status_msg = mcp_send_file(recipient_jid, absolute_saved_file_path)
-                results[-1].update({"file_status": file_status_msg, "file_success": file_success})
+                current_result.update({"file_status": file_status_msg, "file_success": file_success})
+                file_sent_successfully = file_success
                 print(f"File send status for {recipient_jid}: {file_status_msg}")
-            elif absolute_saved_file_path:
-                results[-1].update({"file_status": "Text message failed, file not sent", "file_success": False})
+            
+            text_success, text_status_msg = mcp_send_message(recipient_jid, personalized_message)
+            current_result.update({"text_status": text_status_msg, "text_success": text_success})
+            print(f"Text send status for {recipient_jid}: {text_status_msg}")
+            
+            results.append(current_result)
 
-        # Clean up uploaded file after sending to all recipients
-        if saved_file_path and os.path.exists(saved_file_path): # Check existence with original path used for saving
+        if absolute_saved_file_path and os.path.exists(absolute_saved_file_path):
             try:
-                os.remove(saved_file_path)
-                print(f"Cleaned up uploaded file: {saved_file_path}")
+                os.remove(absolute_saved_file_path) # Use absolute for removal too
+                print(f"Cleaned up uploaded file: {absolute_saved_file_path}")
             except OSError as e:
-                print(f"Error deleting uploaded file {saved_file_path}: {e}")
+                print(f"Error deleting file {absolute_saved_file_path}: {e}")
 
         return jsonify({
             "status": "success", 

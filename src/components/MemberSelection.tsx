@@ -13,6 +13,7 @@ type Member = {
   id: string;
   name: string;
   whatsapp: string;
+  first_text: string;
 };
 
 type MemberSelectionProps = {
@@ -36,17 +37,22 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
     const firstLastIdx = header.indexOf('first_last_text');
     const indicatifIdx = header.indexOf('indicatif_phone_text');
     const whatsappIdx = header.indexOf('whatapp_phone_number_text');
+    const firstTextIdx = header.indexOf('first_text');
+
     return lines.slice(1).map((line, i) => {
       const cols = line.split(',');
       const name = cols[firstLastIdx]?.trim() || '';
       const indicatif = cols[indicatifIdx]?.trim() || '';
-      const whatsapp = cols[whatsappIdx]?.trim() || '';
+      const whatsappNum = cols[whatsappIdx]?.trim() || '';
+      const first_text = cols[firstTextIdx]?.trim() || '';
+      
       return {
         id: `${i + 1}`,
         name,
-        whatsapp: indicatif && whatsapp ? `+${indicatif}${whatsapp}` : '',
+        whatsapp: indicatif && whatsappNum ? `+${indicatif}${whatsappNum}` : '',
+        first_text,
       };
-    }).filter(m => m.name && m.whatsapp);
+    }).filter(m => m.name && m.whatsapp && m.first_text);
   }
 
   useEffect(() => {
@@ -107,24 +113,20 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
 
     setIsSending(true);
 
-    const recipientJIDs = Array.from(selectedMembers).map(id => {
+    const recipientsData = Array.from(selectedMembers).map(id => {
       const member = members.find(m => m.id === id);
-      if (member && member.whatsapp) {
-        // Remove non-digit characters except '+' at the beginning, then append @s.whatsapp.net
+      if (member && member.whatsapp && member.first_text) {
         const number = member.whatsapp.replace(/[^0-9+]/g, '');
-        if (number.startsWith('+')) {
-          return `${number.substring(1)}@s.whatsapp.net`;
-        } else {
-          return `${number}@s.whatsapp.net`;
-        }
+        const jid = number.startsWith('+') ? `${number.substring(1)}@s.whatsapp.net` : `${number}@s.whatsapp.net`;
+        return { jid, first_text: member.first_text };
       }
-      return ''; 
-    }).filter(Boolean); // Filter out any empty strings
+      return null; 
+    }).filter(Boolean) as { jid: string; first_text: string }[];
 
-    if (recipientJIDs.length === 0) {
+    if (recipientsData.length === 0) {
         toast({
             title: "Error",
-            description: "Could not find WhatsApp numbers for selected members.",
+            description: "Could not find necessary data (JID, first name) for selected members.",
             variant: "destructive"
         });
         setIsSending(false);
@@ -133,7 +135,7 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
 
     const formData = new FormData();
     formData.append('message', message);
-    formData.append('recipients', JSON.stringify(recipientJIDs)); // Send as JSON string
+    formData.append('recipients_data', JSON.stringify(recipientsData));
     if (file) {
       formData.append('file', file);
     }
@@ -149,7 +151,7 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
       if (response.ok && result.status === 'success') {
         toast({
           title: "Success!",
-          description: `Message and file (if any) are being processed for ${recipientJIDs.length} member(s). Backend says: ${result.message}`,
+          description: `Message and file (if any) are being processed for ${recipientsData.length} member(s). Backend says: ${result.message}`,
         });
         onSendComplete();
         setSelectedMembers(new Set());

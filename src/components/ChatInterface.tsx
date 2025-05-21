@@ -100,7 +100,7 @@ const ChatInterface = ({ onMessageUpdate }: ChatInterfaceProps) => {
         Your role is to craft warm,  simple , and well-structured messages that match JOMO's community with a friendly and upscale tone.
 
 Message Structure Guidelines:
-1. Start with a personalized greeting (e.g., "Hello JOMO Members", "Dear JOMO Community")
+1. Don't start with a greeting as another part of the web app will do that
 2. Use an opening line that creates excitement
 3. Include clear event details:
    - Date and time
