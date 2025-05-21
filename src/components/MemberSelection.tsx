@@ -189,7 +189,7 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder="Search by name or phone number..."
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="pl-10"
