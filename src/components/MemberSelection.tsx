@@ -106,44 +106,67 @@ const MemberSelection = ({ message, file, onSendComplete }: MemberSelectionProps
     }
 
     setIsSending(true);
-    
-    // Simulate API call
-    console.log("Sending message to member IDs:", Array.from(selectedMembers));
-    console.log("Message:", message);
-    if (file) {
-      console.log("File:", file.name);
+
+    const recipientJIDs = Array.from(selectedMembers).map(id => {
+      const member = members.find(m => m.id === id);
+      if (member && member.whatsapp) {
+        // Remove non-digit characters except '+' at the beginning, then append @s.whatsapp.net
+        const number = member.whatsapp.replace(/[^0-9+]/g, '');
+        if (number.startsWith('+')) {
+          return `${number.substring(1)}@s.whatsapp.net`;
+        } else {
+          return `${number}@s.whatsapp.net`;
+        }
+      }
+      return ''; 
+    }).filter(Boolean); // Filter out any empty strings
+
+    if (recipientJIDs.length === 0) {
+        toast({
+            title: "Error",
+            description: "Could not find WhatsApp numbers for selected members.",
+            variant: "destructive"
+        });
+        setIsSending(false);
+        return;
     }
 
-    // In a real app, you would construct FormData with selected member IDs
-    // and send it to your backend.
-    // For example:
-    // const formData = new FormData();
-    // formData.append('message', message);
-    // if (file) formData.append('file', file);
-    // Array.from(selectedMembers).forEach(id => formData.append('recipient_ids[]', id));
-    // const response = await fetch('http://localhost:8080/api/send-message-to-selected', {
-    //   method: 'POST',
-    //   body: formData
-    // });
-    // const data = await response.json();
-
-    // Simulating a delay for the API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const formData = new FormData();
+    formData.append('message', message);
+    formData.append('recipients', JSON.stringify(recipientJIDs)); // Send as JSON string
+    if (file) {
+      formData.append('file', file);
+    }
 
     try {
-      // Mocking a successful response
-      toast({
-        title: "Success!",
-        description: `Message sent to ${selectedMembers.size} member(s).`,
+      const response = await fetch('http://localhost:5001/api/send-message-to-selected', {
+        method: 'POST',
+        body: formData
       });
-      onSendComplete();
-      setSelectedMembers(new Set());
-      setSearchTerm('');
-      setSelectAll(false);
+
+      const result = await response.json();
+
+      if (response.ok && result.status === 'success') {
+        toast({
+          title: "Success!",
+          description: `Message and file (if any) are being processed for ${recipientJIDs.length} member(s). Backend says: ${result.message}`,
+        });
+        onSendComplete();
+        setSelectedMembers(new Set());
+        setSearchTerm('');
+        setSelectAll(false);
+      } else {
+        toast({
+          title: "Error Sending",
+          description: result.message || "Failed to send message to the backend.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
+      console.error("Error sending message:", error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send message",
+        title: "Network Error",
+        description: error instanceof Error ? error.message : "Could not connect to the backend.",
         variant: "destructive"
       });
     } finally {
