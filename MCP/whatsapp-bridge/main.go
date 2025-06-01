@@ -839,21 +839,35 @@ func main() {
 
 	container, err := sqlstore.New(context.Background(), "sqlite3", "file:store/whatsapp.db?_foreign_keys=on", dbLog)
 	if err != nil {
-		logger.Errorf("Failed to connect to database: %v", err)
+		logger.Errorf("Failed to connect to or create database: %v", err)
 		return
 	}
 
 	// Get device store - This contains session information
+	// If store/whatsapp.db was deleted by run_bridge.sh, this will create a new device.
 	deviceStore, err := container.GetFirstDevice(context.Background())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// No device exists, create one
+			logger.Infof("No existing device found in DB, creating new deviceStore.")
 			deviceStore = container.NewDevice()
-			logger.Infof("Created new device")
+			if deviceStore == nil {
+				logger.Errorf("container.NewDevice() returned nil")
+				return
+			}
+			// Save the new device to the database immediately so it's persisted
+			// This might not be strictly necessary as Connect() might do it, but good for clarity.
+			// err = container.PutDevice(context.Background(), deviceStore)
+			// if err != nil {
+			// 	logger.Errorf("Failed to save new device: %v", err)
+			// 	return
+			// }
 		} else {
-			logger.Errorf("Failed to get device: %v", err)
+			logger.Errorf("Failed to get device from database: %v", err)
 			return
 		}
+	} else {
+		logger.Infof("Existing device found in DB.")
 	}
 
 	// Create client instance
@@ -863,7 +877,7 @@ func main() {
 		return
 	}
 
-	// Initialize message store
+	// Initialize message store for chat history (messages.db)
 	messageStore, err := NewMessageStore()
 	if err != nil {
 		logger.Errorf("Failed to initialize message store: %v", err)
@@ -871,18 +885,18 @@ func main() {
 	}
 	defer messageStore.Close()
 
-	// Start the REST API server (before client event handler setup or connection)
-	// So that if client needs QR, server is ready to provide it
-	go startRESTServer(client, messageStore, 8082) // Call startRESTServer
+	// Start the REST API server
+	go startRESTServer(client, messageStore, 8082)
 
-	// Get the QR channel. This should be done BEFORE the first Connect()
-	// and the channel should be processed by a dedicated goroutine.
+	// Get the QR channel. Since run_bridge.sh deletes whatsapp.db,
+	// deviceStore.ID should be nil on first actual run after a restart,
+	// making this call succeed.
 	qrChan, err := client.GetQRChannel(context.Background())
 	if err != nil {
-		logger.Errorf("Failed to get QR channel: %v", err)
-		// Depending on the error, you might want to return or handle differently
-		// If it's fundamental, perhaps exit. For now, we'll log and continue,
-		// Connect() might still work if already paired.
+		// This error should NOT happen if run_bridge.sh is correctly deleting whatsapp.db
+		// because deviceStore.ID would be nil.
+		logger.Errorf("FATAL: Failed to get QR channel: %v. This usually means a session already exists. Ensure run_bridge.sh deletes store/whatsapp.db.", err)
+		os.Exit(1) // Exit if we can't get QR channel, as pairing is impossible.
 	}
 
 	// Goroutine to handle QR code updates from the channel
@@ -890,11 +904,8 @@ func main() {
 		for evt := range qrChan {
 			logger.Infof("[QRCHAN_GOROUTINE] Received event from qrChan: Type='%s', Code='%s', Timeout='%t', Error='%s'", evt.Event, evt.Code, evt.Timeout, evt.Error)
 			if evt.Event == "code" {
-				// Log QR to console
 				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 				logger.Infof("QR code for pairing from qrChan: %s", evt.Code)
-
-				// Generate PNG and then base64 encode it for the HTTP server
 				var pngBytes []byte
 				pngEncodeErr := error(nil)
 				pngBytes, pngEncodeErr = qrcode.Encode(evt.Code, qrcode.Medium, 256)
@@ -912,6 +923,7 @@ func main() {
 				currentQRString = ""
 			} else if evt.Event == "success" || evt.Event == "success_already_connected" {
 				logger.Infof("[QRCHAN_GOROUTINE] Login event from QR channel: %s. Connected event should follow.", evt.Event)
+				// The *events.Connected handler will set isWhatsappConnected=true and clear currentQRString
 			} else {
 				logger.Infof("[QRCHAN_GOROUTINE] Other event from QR channel: %s", evt.Event)
 			}
@@ -919,90 +931,33 @@ func main() {
 		logger.Infof("[QRCHAN_GOROUTINE] QR channel closed.")
 	}()
 
-	// Setup event handling for messages and history sync
+	// Setup event handling
 	client.AddEventHandler(func(evt interface{}) {
 		switch v := evt.(type) {
 		case *events.Message:
-			// Process regular messages
 			handleMessage(client, messageStore, v, logger)
-
 		case *events.HistorySync:
-			// Process history sync events
 			handleHistorySync(client, messageStore, v, logger)
-
 		case *events.QR:
-			// This event just notifies that a QR code is needed/being processed via qrChan.
-			// The actual QR string update happens in the goroutine consuming qrChan.
-			logger.Infof("Received *events.QR notification. QR string should be updated via qrChan handler.")
-			isWhatsappConnected = false // We are in QR phase
-			// currentQRString might be cleared here too, or rely on qrChan handler to set it or clear on error/timeout
-
+			logger.Infof("[*events.QR NOTIFICATION] Received *events.QR notification. QR string should be updated via qrChan handler if a new code is issued.")
+			isWhatsappConnected = false
 		case *events.Connected:
 			logger.Infof("Connected to WhatsApp")
 			isWhatsappConnected = true
 			logger.Infof("[*events.Connected] Clearing currentQRString.")
 			currentQRString = ""
-
 		case *events.Disconnected:
-			logger.Warnf("Disconnected from WhatsApp. Attempting to reconnect...")
+			logger.Warnf("[*events.Disconnected] Disconnected from WhatsApp. Clearing currentQRString and exiting to force restart.")
 			isWhatsappConnected = false
-			logger.Infof("[*events.Disconnected] Clearing currentQRString.")
 			currentQRString = ""
-
-			go func(cli *whatsmeow.Client) {
-				time.Sleep(5 * time.Second) // Initial delay before trying to connect
-				logger.Infof("[DIAGNOSTIC Disconnected Handler] About to call cli.Connect(). isWhatsappConnected: %t, currentQRString empty: %t", isWhatsappConnected, currentQRString == "")
-				err := cli.Connect()
-				if err != nil {
-					logger.Errorf("[DIAGNOSTIC Disconnected Handler] cli.Connect() error: %v. Will monitor for recovery or QR.", err)
-				} else {
-					logger.Infof("Reconnect attempt initiated by cli.Connect(). Monitoring for Connected event or QR code via qrChan.")
-				}
-
-				// Monitor for successful reconnection or QR code, or timeout
-				recoveryTimeout := time.After(45 * time.Second)  // 45-second timeout for recovery
-				checkInterval := time.NewTicker(2 * time.Second) // Check every 2 seconds
-				defer checkInterval.Stop()
-
-				for {
-					select {
-					case <-recoveryTimeout:
-						if !isWhatsappConnected && currentQRString == "" {
-							logger.Errorf("[FATAL EXIT] Failed to reconnect or obtain QR code within 45s after disconnect. Exiting to allow restart.")
-							os.Exit(1) // Exit the application
-						}
-						// If connected or QR is available, normal operation, exit this loop
-						return
-					case <-checkInterval.C:
-						if isWhatsappConnected || currentQRString != "" {
-							logger.Infof("[Disconnected Handler] Recovery detected (connected or QR available). Ending monitoring.")
-							return // Successfully reconnected or QR is ready
-						}
-						logger.Infof("[Disconnected Handler] Monitoring: Still not connected and no QR. isWhatsappConnected: %t, QR empty: %t", isWhatsappConnected, currentQRString == "")
-					}
-				}
-			}(client)
-
+			os.Exit(1)
 		case *events.LoggedOut:
-			logger.Warnf("Device logged out. Attempting to re-trigger connection logic.")
+			logger.Warnf("[*events.LoggedOut] Device logged out. Clearing currentQRString and exiting to force restart.")
 			isWhatsappConnected = false
-			logger.Infof("[*events.LoggedOut] Clearing currentQRString.")
 			currentQRString = ""
-
-			go func(cli *whatsmeow.Client) {
-				cli.Disconnect()
-				if cli.Store != nil {
-					cli.Store.ID = nil // Force re-pairing
-				}
-				// newQrChan, _ := cli.GetQRChannel(context.Background()) // As above, ensure channel is active
-				// qrChan = newQrChan
-
-				logger.Infof("Attempting to reconnect which should trigger QR if needed...")
-				err := cli.Connect()
-				if err != nil {
-					logger.Errorf("Error during reconnection attempt after logout: %v", err)
-				}
-			}(client)
+			os.Exit(1)
+		default:
+			logger.Infof("[*events.UNKNOWN] Received unhandled event type: %T, value: %+v", evt, evt)
 		}
 	})
 
@@ -1010,22 +965,20 @@ func main() {
 	logger.Infof("Attempting initial connection to WhatsApp...")
 	err = client.Connect()
 	if err != nil {
-		logger.Errorf("Initial connection attempt failed: %v. QR code might be displayed if needed.", err)
-		// If err is about needing QR, the qrChan goroutine will handle it.
-		// If it's another error, app might be in a non-connected state until user action or next auto-reconnect.
+		logger.Warnf("Initial client.Connect() returned error: %v. QR process might be ongoing via qrChan, or a fatal error might occur if QR channel also failed.", err)
+		// If GetQRChannel failed and exited, we won't reach here.
+		// If Connect fails for other reasons (e.g. network), the Disconnected event might eventually fire leading to restart.
 	} else {
-		// If connect returns nil, it might be already connecting or connected.
-		// The event handlers (Connected, QR) will manage the state.
 		logger.Infof("Initial client.Connect() called. Waiting for events (Connected or QR via channel).")
 	}
 
-	// Listen to Ctrl+C (SIGINT) and SIGTERM - Graceful shutdown
+	// Listen to Ctrl+C (SIGINT) and SIGTERM - Graceful shutdown for manual stops
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 
 	// Disconnect client
-	logger.Infof("Shutting down client...")
+	logger.Infof("Shutting down client (Ctrl+C or SIGTERM received)...")
 	client.Disconnect()
 	logger.Infof("Client disconnected.")
 }
@@ -1399,14 +1352,6 @@ func analyzeOggOpus(data []byte) (duration uint32, waveform []byte, err error) {
 	return duration, waveform, nil
 }
 
-// min returns the smaller of x or y
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 // placeholderWaveform generates a synthetic waveform for WhatsApp voice messages
 // that appears natural with some variability based on the duration
 func placeholderWaveform(duration uint32) []byte {
@@ -1422,7 +1367,7 @@ func placeholderWaveform(duration uint32) []byte {
 
 	// Base amplitude and frequency - longer messages get faster frequency
 	baseAmplitude := 35.0
-	frequencyFactor := float64(min(int(duration), 120)) / 30.0
+	frequencyFactor := float64(minInt(int(duration), 120)) / 30.0 // Renamed to minInt to avoid conflict
 
 	for i := range waveform {
 		// Position in the waveform (normalized 0-1)
@@ -1454,4 +1399,12 @@ func placeholderWaveform(duration uint32) []byte {
 	}
 
 	return waveform
+}
+
+// minInt is a helper for placeholderWaveform
+func minInt(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
 }

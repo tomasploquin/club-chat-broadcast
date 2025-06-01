@@ -16,6 +16,7 @@ const WhatsappConnectPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/whatsapp/status`);
       if (!response.ok) {
@@ -48,8 +49,8 @@ const WhatsappConnectPage = () => {
 
   const fetchQrCode = async () => {
     if (isConnected) return; // Don't fetch if already connected
-    setIsLoadingQr(true);
     setError(null);
+    setIsLoadingQr(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/whatsapp/qr`);
       if (!response.ok) {
