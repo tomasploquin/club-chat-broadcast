@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth-context';
+import { useNavigate } from 'react-router-dom';
 
 export function PasswordProtection() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const { authenticate } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const success = authenticate(password);
-    if (!success) {
+    if (success) {
+      navigate('/whatsapp-connect');
+    } else {
       setError(true);
       setPassword('');
     }
