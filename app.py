@@ -7,6 +7,7 @@ import queue
 import threading
 import time
 import requests
+import random
 
 # Add MCP server directory to Python path to allow imports
 # Assuming app.py is in the root and MCP is a subdirectory
@@ -72,7 +73,7 @@ def process_message_queue():
                 print(f"Worker: Text send status for {recipient_jid}: {text_status_msg} (Success: {text_success})")
                 
                 # Introduce a delay to avoid rate limiting
-                time.sleep(5) # Adjust delay as needed
+                time.sleep(random.uniform(2, 6)) # Adjust delay as needed
 
             elif task_type == 'cleanup_file':
                 file_path_to_delete = task.get('file_path')
