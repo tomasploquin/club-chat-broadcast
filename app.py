@@ -6,6 +6,7 @@ import sys
 import queue
 import threading
 import time
+import requests
 
 # Add MCP server directory to Python path to allow imports
 # Assuming app.py is in the root and MCP is a subdirectory
@@ -29,6 +30,10 @@ except ImportError as e:
 
 app = Flask(__name__)
 CORS(app)
+
+# Define the Go WhatsApp Bridge base URL
+# IMPORTANT: Ensure this matches the actual address and port of your Go bridge's HTTP server
+GO_BRIDGE_BASE_URL = "http://localhost:8082" 
 
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
@@ -90,6 +95,48 @@ def process_message_queue():
         finally:
             if 'task' in locals() and task is not None : #Ensure task was pulled
                  message_queue.task_done()
+
+@app.route('/api/whatsapp/status', methods=['GET'])
+def get_whatsapp_status():
+    try:
+        response = requests.get(f"{GO_BRIDGE_BASE_URL}/status", timeout=5)
+        response.raise_for_status()  # Raises an exception for 4XX/5XX errors
+        
+        content_type = response.headers.get('Content-Type', '')
+        if 'application/json' in content_type:
+            return jsonify(response.json()), response.status_code
+        else:
+            print(f"Error: Go bridge /status did not return JSON. Content-Type: {content_type}")
+            print(f"Response text from Go bridge /status: {response.text[:500]}...") # Log first 500 chars
+            return jsonify({"status": "error", "message": "WhatsApp bridge returned non-JSON response for status.", "details": "Check Flask console logs."}), 502
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Go bridge /status: {e}")
+        return jsonify({"status": "error", "message": "Could not connect to WhatsApp bridge", "details": str(e)}), 503
+    except Exception as e:
+        print(f"Unexpected error in /api/whatsapp/status: {e}")
+        return jsonify({"status": "error", "message": "An unexpected error occurred", "details": str(e)}), 500
+
+@app.route('/api/whatsapp/qr', methods=['GET'])
+def get_whatsapp_qr():
+    try:
+        response = requests.get(f"{GO_BRIDGE_BASE_URL}/qr", timeout=15) # Longer timeout for QR code
+        response.raise_for_status()
+
+        content_type = response.headers.get('Content-Type', '')
+        if 'application/json' in content_type:
+            return jsonify(response.json()), response.status_code
+        else:
+            print(f"Error: Go bridge /qr did not return JSON. Content-Type: {content_type}")
+            print(f"Response text from Go bridge /qr: {response.text[:500]}...") # Log first 500 chars
+            return jsonify({"status": "error", "message": "WhatsApp bridge returned non-JSON response for QR.", "details": "Check Flask console logs."}), 502
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Go bridge /qr: {e}")
+        return jsonify({"status": "error", "message": "Could not connect to WhatsApp bridge to get QR code", "details": str(e)}), 503
+    except Exception as e:
+        print(f"Unexpected error in /api/whatsapp/qr: {e}")
+        return jsonify({"status": "error", "message": "An unexpected error occurred", "details": str(e)}), 500
 
 @app.route('/api/send-whatsapp', methods=['POST'])
 def send_whatsapp():
