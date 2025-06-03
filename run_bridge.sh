@@ -1,8 +1,11 @@
 #!/bin/bash
 MAX_RESTARTS=5 # Set a limit to prevent infinite loops if there's a persistent crash
 RESTART_COUNT=0
-BRIDGE_DIR="MCP/whatsapp-bridge" # Path relative to the script location (project root)
-DB_FILE="$BRIDGE_DIR/store/whatsapp.db"
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+BRIDGE_SUB_PATH="MCP/whatsapp-bridge" # Relative path from script location to bridge dir
+BRIDGE_DIR="$SCRIPT_DIR/$BRIDGE_SUB_PATH"
+DB_FILE="$BRIDGE_DIR/store/whatsapp.db" # Path to the DB file based on absolute BRIDGE_DIR
 
 while [ $RESTART_COUNT -lt $MAX_RESTARTS ]; do
     echo "Starting WhatsApp Bridge (Attempt: $((RESTART_COUNT + 1)) of $MAX_RESTARTS)..."

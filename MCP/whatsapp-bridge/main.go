@@ -921,6 +921,8 @@ func main() {
 				logger.Errorf("[QRCHAN_GOROUTINE] QR timeout event from channel. Clearing currentQRString.")
 				isWhatsappConnected = false
 				currentQRString = ""
+				logger.Warnf("[QRCHAN_GOROUTINE] QR Timeout. Exiting to force restart and get new QR.")
+				os.Exit(1) // Force restart to allow re-generation of QR on next load
 			} else if evt.Event == "success" || evt.Event == "success_already_connected" {
 				logger.Infof("[QRCHAN_GOROUTINE] Login event from QR channel: %s. Connected event should follow.", evt.Event)
 				// The *events.Connected handler will set isWhatsappConnected=true and clear currentQRString
