@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Go WhatsApp Bridge Service
+  whatsapp-bridge:
+    build:
+      context: ./MCP/whatsapp-bridge
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    volumes:
+      - whatsapp_data:/app/store
+    environment:
+      - PORT=8082
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Python Flask Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./MCP:/app/MCP
+    environment:
+      - PORT=5001
+      - GO_BRIDGE_BASE_URL=http://whatsapp-bridge:8082
+      - FLASK_ENV=production
+    depends_on:
+      whatsapp-bridge:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # React Frontend (Development)
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: development
+    ports:
+      - "5173:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5001
+    command: npm run dev -- --host 0.0.0.0
+    profiles:
+      - dev
+
+  # React Frontend (Production Build)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: production
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5001
+    depends_on:
+      - backend
+    profiles:
+      - prod
+
+volumes:
+  whatsapp_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge 
