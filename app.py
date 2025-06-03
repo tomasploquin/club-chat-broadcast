@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import os
 import json
@@ -29,12 +29,12 @@ except ImportError as e:
         return True, "Message sent (dummy)"
     
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='dist', static_url_path='')
 CORS(app)
 
 # Define the Go WhatsApp Bridge base URL
 # IMPORTANT: Ensure this matches the actual address and port of your Go bridge's HTTP server
-GO_BRIDGE_BASE_URL = "http://localhost:8082" 
+GO_BRIDGE_BASE_URL = os.environ.get('GO_BRIDGE_BASE_URL', "http://localhost:8082")
 
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
@@ -225,9 +225,21 @@ def send_message_to_selected():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# Serve React App
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_react_app(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
 if __name__ == '__main__':
     # Start the worker thread
     worker_thread = threading.Thread(target=process_message_queue, daemon=True)
     worker_thread.start()
     print("Message processing worker thread started.")
-    app.run(debug=True, port=5001) 
+    
+    # Use PORT environment variable for deployment, fallback to 5001 for local
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=False, host='0.0.0.0', port=port) 
