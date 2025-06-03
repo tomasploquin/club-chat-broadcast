@@ -1,7 +1,7 @@
 #!/bin/bash
 MAX_RESTARTS=5 # Set a limit to prevent infinite loops if there's a persistent crash
 RESTART_COUNT=0
-BRIDGE_DIR="/Users/tomicrack/Desktop/JOMO_bot/club-chat-broadcast/MCP/whatsapp-bridge" # <-- IMPORTANT: Verify this path!
+BRIDGE_DIR="MCP/whatsapp-bridge" # Path relative to the script location (project root)
 DB_FILE="$BRIDGE_DIR/store/whatsapp.db"
 
 while [ $RESTART_COUNT -lt $MAX_RESTARTS ]; do
