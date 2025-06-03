@@ -139,6 +139,11 @@ def get_whatsapp_qr():
         print(f"Unexpected error in /api/whatsapp/qr: {e}")
         return jsonify({"status": "error", "message": "An unexpected error occurred", "details": str(e)}), 500
 
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint for Docker health checks"""
+    return jsonify({"status": "healthy", "service": "club-chat-backend"}), 200
+
 @app.route('/api/send-whatsapp', methods=['POST'])
 def send_whatsapp():
     # This route seems to be from an older setup, 
