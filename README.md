@@ -71,3 +71,34 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+# Club Chat Broadcast
+
+## Running the Application
+
+To run this application, you will need to open three separate terminal windows.
+
+**Terminal 1: Start the WhatsApp Bridge**
+
+1.  Make the script executable:
+    ```bash
+    chmod +x run_bridge.sh
+    ```
+2.  Run the script:
+    ```bash
+    ./run_bridge.sh
+    ```
+
+**Terminal 2: Start the Python Application**
+
+1.  Run the Python application:
+    ```bash
+    python app.py
+    ```
+
+**Terminal 3: Start the Development Server**
+
+1.  Run the development server:
+    ```bash
+    npm run dev
+    ```
